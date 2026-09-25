@@ -7,7 +7,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { width: 1920px; height: 1080px; background-color: transparent; font-family: 'Courier New', Courier, monospace; overflow: hidden; position: relative; color: #cccccc; }
         
-        /* 🔲 PANEL DE ALERTAS EN VIVO (HUD) - Arriba a la izquierda */
+        /* 🔲 PANEL DE ALERTAS EN VIVO (HUD) */
         .events-panel { 
             position: absolute; 
             top: 40px; 
@@ -139,20 +139,12 @@
     <div class="spotify-frame-bg"></div>
 
     <script>
-        // Sstema inteligente de memoria para la URL real de GitHub Pages
-        window.addEventListener('DOMContentLoaded', () => {
-            try {
-                if (localStorage.getItem('stalker_follower')) {
-                    document.getElementById('follower').innerText = localStorage.getItem('stalker_follower');
-                }
-                if (localStorage.getItem('stalker_subscriber')) {
-                    document.getElementById('subscriber').innerText = localStorage.getItem('stalker_subscriber');
-                }
-                if (localStorage.getItem('stalker_donation')) {
-                    document.getElementById('donation').innerText = localStorage.getItem('stalker_donation');
-                }
-            } catch (e) { console.error("Error al acceder a LocalStorage:", e); }
-        });
+        // Carga automática inicial de memoria persistente compatible con servidores web
+        try {
+            if (localStorage.getItem('just_follower')) document.getElementById('follower').innerText = localStorage.getItem('just_follower');
+            if (localStorage.getItem('just_subscriber')) document.getElementById('subscriber').innerText = localStorage.getItem('just_subscriber');
+            if (localStorage.getItem('just_donation')) document.getElementById('donation').innerText = localStorage.getItem('just_donation');
+        } catch(e) {}
 
         const STREAMLABS_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbiI6Ijc1QUQ2MDY2RjU0RkNEOEU1NzdCIiwicmVhZF9vbmx5Ijp0cnVlLCJwcmV2ZW50X21hc3RlciI6dHJ1ZSwidHdpdGNoX2lkIjoiMTkyODYyNzYwIn0.VkuuxKIQDYWy-gzr_Kav-XvmMuS70n2J-MPQi9zSzMk";
         if (STREAMLABS_TOKEN) {
@@ -161,56 +153,47 @@
             streamlabs.on('event', (eventData) => {
                 if (!eventData || !eventData.message) return;
                 
-                let msgData = eventData.message;
-                if (Array.isArray(msgData)) {
-                    if (msgData.length === 0) return;
-                    msgData = msgData[0];
-                }
+                // Extraer el objeto de datos plano directo
+                let d = eventData.message;
+                if (Array.isArray(d)) { d = d[0]; }
+                if (!d) return;
                 
-                if (!msgData) return;
-                
-                const name = msgData.name || msgData.username;
+                const name = d.name || d.username;
                 if (!name) return;
                 
                 let elementId = ""; 
-                let displayValue = name;
-                let storageKey = "";
-                const type = eventData.type;
+                let val = name;
+                let key = "";
                 
-                switch(type) {
+                switch(eventData.type) {
                     case 'follow': 
                         elementId = "follower"; 
-                        storageKey = "stalker_follower";
+                        key = "just_follower";
                         break;
                     case 'subscription': 
                     case 'resub': 
                         elementId = "subscriber"; 
-                        storageKey = "stalker_subscriber";
+                        key = "just_subscriber";
                         break;
                     case 'bits': 
                         elementId = "donation"; 
-                        storageKey = "stalker_donation";
-                        displayValue = name + " (" + msgData.amount + "B)"; 
+                        key = "just_donation";
+                        val = name + " (" + d.amount + "B)"; 
                         break;
                     case 'donation': 
                         elementId = "donation"; 
-                        storageKey = "stalker_donation";
-                        displayValue = name + " (" + (msgData.formatted_amount || msgData.amount) + ")"; 
+                        key = "just_donation";
+                        val = name + " (" + (d.formatted_amount || d.amount) + ")"; 
                         break;
                 }
                 
                 if (elementId) { 
-                    const element = document.getElementById(elementId); 
-                    if (element) {
-                        element.innerText = displayValue; 
-                        
-                        // Guardar físicamente el nuevo evento en la memoria del navegador de OBS
-                        try {
-                            if (storageKey) localStorage.setItem(storageKey, displayValue);
-                        } catch (e) { console.error("Error al guardar en LocalStorage:", e); }
-                        
-                        element.classList.add('updated'); 
-                        setTimeout(() => { element.classList.remove('updated'); }, 5000); 
+                    const el = document.getElementById(elementId); 
+                    if (el) {
+                        el.innerText = val; 
+                        try { if (key) localStorage.setItem(key, val); } catch(e) {}
+                        el.classList.add('updated'); 
+                        setTimeout(() => { el.classList.remove('updated'); }, 5000); 
                     }
                 }
             });
