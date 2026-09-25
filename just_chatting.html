@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>S.T.A.L.K.E.R. - Just Chatting con Marcos e Indicador</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { width: 1920px; height: 1080px; background-color: transparent; font-family: 'Courier New', Courier, monospace; overflow: hidden; position: relative; color: #cccccc; }
+        
+        /* 🔲 PANEL DE ALERTAS EN VIVO (HUD) - Arriba a la izquierda */
+        .events-panel { 
+            position: absolute; 
+            top: 40px; 
+            left: 40px; 
+            width: 380px; 
+            background: rgba(15, 15, 15, 0.85); 
+            border: 3px solid #2b251f; 
+            outline: 1px solid #4a3f35; 
+            padding: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8); 
+            z-index: 5;
+        }
+        .events-panel::before { content: ''; position: absolute; top: 12px; right: 15px; width: 8px; height: 8px; background-color: #39ff14; border-radius: 50%; box-shadow: 0 0 8px #39ff14; animation: pulse-hud 2.5s infinite ease-in-out; }
+        .panel-title { color: #00cccc; font-size: 14px; font-weight: bold; letter-spacing: 2px; margin-bottom: 12px; border-bottom: 1px dashed rgba(0, 204, 204, 0.3); padding-bottom: 5px; text-shadow: 0 0 5px rgba(0, 204, 204, 0.4); }
+        .event-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; letter-spacing: 1px; }
+        .event-row:last-child { margin-bottom: 0; }
+        .event-label { color: #888888; font-weight: bold; }
+        .event-value { color: #ff5500; text-align: right; font-weight: bold; text-shadow: 0 0 3px rgba(255, 85, 0, 0.3); animation: text-flicker 5s infinite; transition: all 0.5s ease; }
+        .updated { color: #39ff14 !important; text-shadow: 0 0 10px #39ff14 !important; }
+
+        /* 🔥 PANTALLA CENTRAL - MARCO DEL STALKER.GIF */
+        .campfire-container { 
+            position: absolute; 
+            top: 200px; 
+            left: 280px; 
+            width: 1080px; 
+            height: 665px; 
+            background: rgba(10, 10, 10, 0.9); 
+            border: 3px solid #3d2712; 
+            outline: 1px solid #52361b; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            box-shadow: inset 0 0 40px rgba(0,0,0,1), 0 10px 30px rgba(0,0,0,0.8); 
+            overflow: hidden;
+            z-index: 1;
+        }
+        .campfire-gif { 
+            width: 100%; 
+            height: 100%; 
+            display: block; 
+            object-fit: cover; 
+        }
+        
+        /* 💬 RECUADRO DE TWITCH CHAT (480px x 980px) */
+        .twitch-chat-frame { 
+            position: absolute; 
+            top: 40px; 
+            right: 40px; 
+            width: 480px; 
+            height: 980px; 
+            border: 2px dashed rgba(136, 136, 136, 0.4); 
+            background: rgba(15, 15, 15, 0.6); 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7); 
+            z-index: 1;
+        }
+
+        /* 📡 INDICADOR DE SEÑAL DE MÚSICA */
+        .spotify-status-panel {
+            position: absolute;
+            bottom: 95px;
+            left: 40px;
+            width: 450px;
+            height: 35px;
+            background: rgba(15, 15, 15, 0.85);
+            border: 1px solid #2b251f;
+            border-left: 4px solid #39ff14;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #39ff14;
+            text-shadow: 0 0 5px rgba(57, 255, 20, 0.4);
+            animation: text-flicker 6s infinite;
+            z-index: 5;
+        }
+        .spotify-status-panel::after {
+            content: '';
+            position: absolute;
+            right: 15px;
+            width: 6px;
+            height: 6px;
+            background-color: #39ff14;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #39ff14;
+            animation: pulse-hud 1.2s infinite ease-in-out;
+        }
+
+        /* 🎵 RECUADRO PARA REPRODUCTOR DE MÚSICA */
+        .spotify-frame-bg {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            width: 450px;
+            height: 50px;
+            background: rgba(15, 15, 15, 0.85);
+            border-left: 4px solid #00cccc;
+            border-top: 1px solid #2b251f;
+            border-right: 1px solid #2b251f;
+            border-bottom: 1px solid #2b251f;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            z-index: 5;
+        }
+
+        @keyframes pulse-hud { 0%, 100% { background-color: #39ff14; box-shadow: 0 0 8px #39ff14; opacity: 1; } 50% { background-color: #053300; box-shadow: 0 0 0px transparent; opacity: 0.4; } }
+        @keyframes text-flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.8; filter: blur(0.5px); } }
+    </style>
+    <script src="https://cloudflare.com"></script>
+</head>
+<body>
+
+    <div class="events-panel">
+        <div class="panel-title">СИСТЕМА // EN LINEA</div>
+        <div class="event-row"><span class="event-label">ÚLT. SEGUIDOR:</span><span class="event-value" id="follower">almapatatil</span></div>
+        <div class="event-row"><span class="event-label">ÚLT. SUSCRIPTOR:</span><span class="event-value" id="subscriber">cachorroush</span></div>
+        <div class="event-row"><span class="event-label">ÚLT. BITS/DONACIÓN:</span><span class="event-value" id="donation">nachonegri45</span></div>
+    </div>
+
+    <div class="campfire-container">
+        <img src="stalker.gif" alt="Campfire Animation" class="campfire-gif">
+    </div>
+
+    <div class="twitch-chat-frame"></div>
+
+    <div class="spotify-status-panel">РАДИО_ЗОНА // SEÑAL_CONECTADA</div>
+    <div class="spotify-frame-bg"></div>
+
+    <script>
+        // Sstema inteligente de memoria para la URL real de GitHub Pages
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (localStorage.getItem('stalker_follower')) {
+                    document.getElementById('follower').innerText = localStorage.getItem('stalker_follower');
+                }
+                if (localStorage.getItem('stalker_subscriber')) {
+                    document.getElementById('subscriber').innerText = localStorage.getItem('stalker_subscriber');
+                }
+                if (localStorage.getItem('stalker_donation')) {
+                    document.getElementById('donation').innerText = localStorage.getItem('stalker_donation');
+                }
+            } catch (e) { console.error("Error al acceder a LocalStorage:", e); }
+        });
+
+        const STREAMLABS_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbiI6Ijc1QUQ2MDY2RjU0RkNEOEU1NzdCIiwicmVhZF9vbmx5Ijp0cnVlLCJwcmV2ZW50X21hc3RlciI6dHJ1ZSwidHdpdGNoX2lkIjoiMTkyODYyNzYwIn0.VkuuxKIQDYWy-gzr_Kav-XvmMuS70n2J-MPQi9zSzMk";
+        if (STREAMLABS_TOKEN) {
+            const streamlabs = io('https://streamlabs.com' + STREAMLABS_TOKEN, { transports: ['websocket'] });
+            
+            streamlabs.on('event', (eventData) => {
+                if (!eventData || !eventData.message) return;
+                
+                let msgData = eventData.message;
+                if (Array.isArray(msgData)) {
+                    if (msgData.length === 0) return;
+                    msgData = msgData[0];
+                }
+                
+                if (!msgData) return;
+                
+                const name = msgData.name || msgData.username;
+                if (!name) return;
+                
+                let elementId = ""; 
+                let displayValue = name;
+                let storageKey = "";
+                const type = eventData.type;
+                
+                switch(type) {
+                    case 'follow': 
+                        elementId = "follower"; 
+                        storageKey = "stalker_follower";
+                        break;
+                    case 'subscription': 
+                    case 'resub': 
+                        elementId = "subscriber"; 
+                        storageKey = "stalker_subscriber";
+                        break;
+                    case 'bits': 
+                        elementId = "donation"; 
+                        storageKey = "stalker_donation";
+                        displayValue = name + " (" + msgData.amount + "B)"; 
+                        break;
+                    case 'donation': 
+                        elementId = "donation"; 
+                        storageKey = "stalker_donation";
+                        displayValue = name + " (" + (msgData.formatted_amount || msgData.amount) + ")"; 
+                        break;
+                }
+                
+                if (elementId) { 
+                    const element = document.getElementById(elementId); 
+                    if (element) {
+                        element.innerText = displayValue; 
+                        
+                        // Guardar físicamente el nuevo evento en la memoria del navegador de OBS
+                        try {
+                            if (storageKey) localStorage.setItem(storageKey, displayValue);
+                        } catch (e) { console.error("Error al guardar en LocalStorage:", e); }
+                        
+                        element.classList.add('updated'); 
+                        setTimeout(() => { element.classList.remove('updated'); }, 5000); 
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
