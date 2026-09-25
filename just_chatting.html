@@ -118,7 +118,7 @@
         @keyframes pulse-hud { 0%, 100% { background-color: #39ff14; box-shadow: 0 0 8px #39ff14; opacity: 1; } 50% { background-color: #053300; box-shadow: 0 0 0px transparent; opacity: 0.4; } }
         @keyframes text-flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.8; filter: blur(0.5px); } }
     </style>
-    <script src="https://cloudflare.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
 </head>
 <body>
 
@@ -139,61 +139,71 @@
     <div class="spotify-frame-bg"></div>
 
     <script>
-        // Carga automática inicial de memoria persistente compatible con servidores web
+        // Cargar memoria persistente guardada en el disco de la PC vía web
         try {
-            if (localStorage.getItem('just_follower')) document.getElementById('follower').innerText = localStorage.getItem('just_follower');
-            if (localStorage.getItem('just_subscriber')) document.getElementById('subscriber').innerText = localStorage.getItem('just_subscriber');
-            if (localStorage.getItem('just_donation')) document.getElementById('donation').innerText = localStorage.getItem('just_donation');
+            if (localStorage.getItem('gh_follower')) document.getElementById('follower').innerText = localStorage.getItem('gh_follower');
+            if (localStorage.getItem('gh_subscriber')) document.getElementById('subscriber').innerText = localStorage.getItem('gh_subscriber');
+            if (localStorage.getItem('gh_donation')) document.getElementById('donation').innerText = localStorage.getItem('gh_donation');
         } catch(e) {}
 
         const STREAMLABS_TOKEN = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbiI6Ijc1QUQ2MDY2RjU0RkNEOEU1NzdCIiwicmVhZF9vbmx5Ijp0cnVlLCJwcmV2ZW50X21hc3RlciI6dHJ1ZSwidHdpdGNoX2lkIjoiMTkyODYyNzYwIn0.VkuuxKIQDYWy-gzr_Kav-XvmMuS70n2J-MPQi9zSzMk";
         if (STREAMLABS_TOKEN) {
-            const streamlabs = io('https://streamlabs.com' + STREAMLABS_TOKEN, { transports: ['websocket'] });
+            // Conexión limpia por protocolo seguro de WebSockets oficiales
+            const streamlabs = io('https://sockets.streamlabs.com?token=' + STREAMLABS_TOKEN, { transports: ['websocket'] });
             
             streamlabs.on('event', (eventData) => {
-                if (!eventData || !eventData.message) return;
+                // Quitamos el filtro selectivo de plataforma para capturar eventos de prueba y reales sin distinción
+                if (!eventData || !eventData.message || !eventData.type) return;
                 
-                // Extraer el objeto de datos plano directo
-                let d = eventData.message;
-                if (Array.isArray(d)) { d = d[0]; }
-                if (!d) return;
+                const type = eventData.type;
+                let data = eventData.message;
                 
-                const name = d.name || d.username;
+                // Forzar la lectura del primer objeto dentro del contenedor
+                if (Array.isArray(data)) {
+                    if (data.length === 0) return;
+                    data = data[0];
+                }
+                
+                // Extraer el nombre plano enviado por la alerta
+                const name = data.name || data.username;
                 if (!name) return;
                 
                 let elementId = ""; 
-                let val = name;
-                let key = "";
+                let finalVal = name;
+                let storageKey = "";
                 
-                switch(eventData.type) {
+                switch(type) {
                     case 'follow': 
                         elementId = "follower"; 
-                        key = "just_follower";
+                        storageKey = "gh_follower";
                         break;
                     case 'subscription': 
                     case 'resub': 
                         elementId = "subscriber"; 
-                        key = "just_subscriber";
+                        storageKey = "gh_subscriber";
                         break;
                     case 'bits': 
                         elementId = "donation"; 
-                        key = "just_donation";
-                        val = name + " (" + d.amount + "B)"; 
+                        storageKey = "gh_donation";
+                        finalVal = name + " (" + (data.amount || 0) + "B)"; 
                         break;
                     case 'donation': 
                         elementId = "donation"; 
-                        key = "just_donation";
-                        val = name + " (" + (d.formatted_amount || d.amount) + ")"; 
+                        storageKey = "gh_donation";
+                        finalVal = name + " (" + (data.formatted_amount || data.amount || "") + ")"; 
                         break;
                 }
                 
                 if (elementId) { 
-                    const el = document.getElementById(elementId); 
-                    if (el) {
-                        el.innerText = val; 
-                        try { if (key) localStorage.setItem(key, val); } catch(e) {}
-                        el.classList.add('updated'); 
-                        setTimeout(() => { el.classList.remove('updated'); }, 5000); 
+                    const element = document.getElementById(elementId); 
+                    if (element) {
+                        element.innerText = finalVal; 
+                        
+                        // Sellar los datos en la memoria física de la máquina mediante GitHub Pages
+                        try { if (storageKey) localStorage.setItem(storageKey, finalVal); } catch(e) {}
+                        
+                        element.classList.add('updated'); 
+                        setTimeout(() => { element.classList.remove('updated'); }, 5000); 
                     }
                 }
             });
